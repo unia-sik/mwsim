@@ -1,0 +1,27 @@
+# $Id: std.mwv 694 2014-06-24 07:57:30Z klugeflo $
+
+# Standard global variables for mwsim evals
+
+variables
+  # all scenarios
+  SIZE_CFG_SYS_1 = 180
+  SIZE_CFG_NODE = 512
+
+
+  # mossca scenario
+  SIZE_KERN0 = 4452
+  SIZE_KERNSTD = 4792
+  SIZE_BOOTROM = 4304
+  SIZE_APPLICATION = 10240
+
+  # nokrep scenario
+  SIZE_KERN0_NOKREP = 4452
+  SIZE_KERNSTD_NOKREP = 4460
+  SIZE_BOOTROM_NOKREP = 4208
+  SIZE_APPLICATION_NOKREP = 10240
+
+
+  # fullimg szenario
+  SIZE_IMG_BOOT = 8572
+  SIZE_IMG_APPLICATION = 14668
+end variables

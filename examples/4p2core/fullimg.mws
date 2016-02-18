@@ -1,0 +1,107 @@
+# $Id: fullimg.mws 699 2014-06-27 10:30:00Z klugeflo $
+
+# exec times based on revision 682, compiled for armv6m using ppgw.xml
+
+# assumes application size 10kB
+
+# execution times in this scenario are taken from the mossca scenario
+# except for:
+# - bootrom performs no kernel and configdata 0ribution
+# - kernstd:main() the call to 0ribute_my_kernel_image() and succeeding
+#   error check were commented out.
+# - no recv* in kernstd:main()
+# - image sizes adjusted
+# Furthermore, there is no 0inction between line and end nodes, as all
+# nodes get their kernel directly from the boot node.
+
+system
+end system
+
+
+variables
+end variables
+
+
+###########
+# Boot node
+node [0]
+  ###########
+  # bios_init
+  exec 17
+  # bios main until jump_to_kernel (excl. loading)
+  exec 119 # ignoring do_[open|lseek|read|close]
+  # load kern+bootrom
+  load SIZE_IMG_BOOT
+
+  #############
+  # start kern0
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128 # FIXME: realistic?
+
+  # kern0 main...
+  exec 217 # excl. loading
+  # load bootrom
+  #load 23340 # different size
+  # call_application
+  exec 15
+
+  ###############
+  # start bootrom
+  # total: # exec 3612???
+  exec 81 # main
+
+  # configure_system
+  # total: 1786
+  exec 318 # without calls and errors
+
+  # load_system_configuration
+  exec 690
+  calc N_CLIENTS = N_NODES - 1
+  calc SIZE_CFG_SYS = N_CLIENTS * SIZE_CFG_SYS_1
+  load SIZE_CFG_SYS
+
+  # check_configuration
+  exec 33
+
+  # perform_configuration
+  exec 77 # basic ET
+  foreach cnode in [1-15]
+    # configure_node
+    exec 252
+    # ...then application code
+    load SIZE_IMG_APPLICATION
+    send cnode APPLICATION SIZE_IMG_APPLICATION
+    # loop overhead from perform_configuration
+    exec 222
+  end foreach
+end node
+
+########################
+# Distribution end nodes
+node [1-15]
+  ###########
+  # bios_init
+  exec 17
+  # start bios
+  exec 111
+
+  wait APPLICATION from 0
+  recv 0 APPLICATION
+
+  #############
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128 # FIXME: realistic?
+  # kernstd main...
+
+  # start kernel
+  exec 85
+  # FIXME: add some time for configuration? Possibly in handleCopyTable
+end node

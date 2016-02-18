@@ -1,0 +1,264 @@
+# $Id: mossca.mws 699 2014-06-27 10:30:00Z klugeflo $
+
+# exec times based on revision 682, compiled for armv6m using ppgw.xml
+
+# assumes application size 10kB
+
+system
+end system
+
+
+variables
+  ROW_DISTANCE = 6
+end variables
+
+
+###########
+# Boot node
+node [0]
+  ###########
+  # bios_init
+  exec 17
+  # bios main until jump_to_kernel (excl. loading)
+  exec 119 # ignoring do_[open|lseek|read|close]
+  # load kern0
+  load SIZE_KERN0
+
+  #############
+  # start kern0
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128 # FIXME: realistic?
+
+  # kern0 main...
+  exec 217 # excl. loading
+  # load bootrom
+  load SIZE_BOOTROM
+  # call_application
+  exec 15
+
+  ###############
+  # start bootrom
+  # total: # exec 3612???
+  exec 81 # main
+  # load kernstd
+  load SIZE_KERNSTD
+  exec 284 # distribute_standard_kernel
+  # start distribution
+  send ROW_DISTANCE KSTD SIZE_KERNSTD
+  send 1 KSTD SIZE_KERNSTD
+
+
+  # configure_system
+  # total: 1786
+  exec 318 # without calls and errors
+
+  # load_system_configuration
+  exec 690
+  calc N_CLIENTS = N_NODES - 1
+  calc SIZE_CFG_SYS = N_CLIENTS * SIZE_CFG_SYS_1
+  load SIZE_CFG_SYS
+
+  # check_configuration
+  exec 33
+
+  # perform_configuration
+  exec 77 # basic ET
+  parwait KRDY from [1-35] as cnode
+    # configure_node
+    exec 487
+    # first load configuration data
+    load SIZE_CFG_NODE
+    send cnode CONFIG SIZE_CFG_NODE
+
+    # ...then application code
+    load SIZE_APPLICATION
+    send cnode APPLICATION SIZE_APPLICATION
+    # loop overhead from perform_configuration
+    exec 222
+  end parwait
+end node
+
+########################
+# Distribution end nodes
+node [5,11,17,23,29,35]
+  ###########
+  # bios_init
+  exec 17
+  # start bios
+  exec 111
+
+  calc KSENDER = MY_NODE_ID - 1
+  wait KSTD from KSENDER
+  recv KSENDER KSTD
+
+  #############
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128 # FIXME: realistic?
+  # kernstd main...
+
+  # start kernel
+  exec 196 # without calls to recv_*
+  # might actually a bit less because last lines won't be executed!
+
+  send 0 KRDY 1
+
+  # recv_configuration
+  wait CONFIG from 0
+  recv 0 CONFIG
+  exec 785
+
+  # recv_application
+  wait APPLICATION from 0
+  recv 0 APPLICATION
+  exec 130
+  #send 0 ARDY 1
+
+  #wait RUN
+  #recv 0 RUN
+end node
+
+############################
+# Nodes with row distribution
+node [1-4,7-10,13-16,19-22,25-28,31-34]
+  ###########
+  # bios_init
+  exec 17
+  # start bios
+  exec 111
+
+  calc KSENDER = MY_NODE_ID - 1
+  wait KSTD from KSENDER
+  recv KSENDER KSTD
+
+  #############
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128
+  # kernstd main...
+
+  # start kernel
+  exec 241 # without calls to recv_*
+  # might actually a bit less because last lines won't be executed!
+
+  calc ndest = MY_NODE_ID + 1
+  send ndest KSTD SIZE_KERNSTD
+  send 0 KRDY 1
+  
+  # recv_configuration
+  wait CONFIG from 0
+  recv 0 CONFIG
+  exec 785
+
+  # recv_application
+  wait APPLICATION from 0
+  recv 0 APPLICATION
+  exec 130
+  #send 0 ARDY 1
+
+  #wait RUN
+  #recv 0 RUN
+end node
+
+############################
+# 1st-column Node with row distribution
+node [30]
+  ###########
+  # bios_init
+  exec 17
+  # start bios
+  exec 111
+
+  calc KSENDER = MY_NODE_ID - ROW_DISTANCE
+  wait KSTD from KSENDER
+  recv KSENDER KSTD
+
+  #############
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128
+  # kernstd main...
+
+  # start kernel
+  exec 241 # without calls to recv_*
+  # might actually a bit less because last lines won't be executed!
+
+  calc ndest = MY_NODE_ID + 1
+  send ndest KSTD SIZE_KERNSTD
+  send 0 KRDY 1
+  
+  # recv_configuration
+  wait CONFIG from 0
+  recv 0 CONFIG
+  exec 785
+
+  # recv_application
+  wait APPLICATION from 0
+  recv 0 APPLICATION
+  exec 130
+  #send 0 ARDY 1
+
+  #wait RUN
+  #recv 0 RUN
+end node
+
+########################################
+# Nodes with column and row distribution
+node [6,12,18,24]
+  ###########
+  # bios_init
+  exec 17
+  # start bios
+  exec 111
+
+  calc KSENDER = MY_NODE_ID - ROW_DISTANCE
+  wait KSTD from KSENDER
+  recv KSENDER KSTD
+
+  #############
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128
+  # kernstd main...
+
+  # start kernel
+  exec 300 # without calls to recv_*
+  # might actually a bit less because last lines won't be executed!
+
+  calc ndestc = MY_NODE_ID + ROW_DISTANCE
+  send ndestc KSTD SIZE_KERNSTD
+
+  calc ndestr = MY_NODE_ID + 1
+  send ndestr KSTD SIZE_KERNSTD
+  send 0 KRDY 1
+  
+  # recv_configuration
+  wait CONFIG from 0
+  recv 0 CONFIG
+  exec 785
+
+  # recv_application
+  wait APPLICATION from 0
+  recv 0 APPLICATION
+  exec 130
+  #send 0 ARDY 1
+
+  #wait RUN
+  #recv 0 RUN
+end node

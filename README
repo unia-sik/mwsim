@@ -1,0 +1,57 @@
+MWSim is intended to simulate the worst-case behaviour of the boot process
+in a NoC-based manycore processor.
+
+IMPORTANT NOTE: The numbers derived by MWSim can only give a safe upper
+bound, if for all nodes in the system (except for the boot node) same image
+sizes are assumed. In any other case, deviations of the actual timing
+behaviour from the simulated one (i.e. faster execution than assumed) may
+result in timing anomalies.
+
+Requirements:
+=============
+- bison
+- flex
+
+Building and Installation:
+==========================
+Call cmake with the root directory of this package as parameter, e.g.:
+
+$ cd MWSIM_ROOT/build
+$ cmake ..
+$ make
+
+For installation into ~/local, you may also use the build.sh script:
+
+$ cd MWSIM_ROOT/build
+$ ../build.sh ..
+$ make
+$ make install
+
+To build the doxygen documentation, call:
+
+$ make doc
+
+
+License:
+========
+MWSim is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+MWSim is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+
+Further Information:
+====================
+For more information on the MWSim scripts, please refer to:
+
+Florian Kluge, Mike Gerdes, and Theo Ungerer. 2014.
+The Boot Process in Real-time Manycore Processors.
+In Proceedings of the 22nd International Conference on Real-Time Networks
+and Systems (RTNS '14).
+ACM, New York, NY, USA, , Pages 77 , 10 pages.
+DOI=http://dx.doi.org/10.1145/2659787.2659816

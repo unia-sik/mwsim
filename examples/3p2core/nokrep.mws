@@ -1,0 +1,129 @@
+# $Id: nokrep.mws 699 2014-06-27 10:30:00Z klugeflo $
+
+# exec times based on revision 682, compiled for armv6m using ppgw.xml
+
+# assumes application size 10kB
+
+# execution times in this scenario are taken from the mossca scenario
+# except for:
+# - bootrom distributes kernel in a loop
+# - kernstd:main() the call to distribute_my_kernel_image() and succeeding
+#   error check were commented out.
+# Furthermore, there is no distinction between line and end nodes, as all
+# nodes get their kernel directly from the boot node.
+
+system
+end system
+
+variables
+end variables
+
+
+###########
+# Boot node
+node [0]
+  ###########
+  # bios_init
+  exec 17
+  # bios main until jump_to_kernel (excl. loading)
+  exec 119 # ignoring do_[open|lseek|read|close]
+  # load kern0
+  load SIZE_KERN0_NOKREP
+
+  #############
+  # start kern0
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128 # FIXME: realistic?
+
+  # kern0 main...
+  exec 217 # excl. loading
+  # load bootrom
+  load SIZE_BOOTROM_NOKREP # different size
+  # call_application
+  exec 15
+
+  ###############
+  # start bootrom
+  # total: # exec 3612???
+  exec 81 # main
+  # load kernstd
+  load SIZE_KERNSTD_NOKREP
+  # distribute_standard_kernel
+  exec 155 # basic cost
+  foreach cnode in [1-8]
+    exec 61
+    send cnode KSTD SIZE_KERNSTD_NOKREP
+  end foreach
+
+
+  # configure_system
+  # total: 1786
+  exec 318 # without calls and errors
+
+  # load_system_configuration
+  exec 690
+  calc N_CLIENTS = N_NODES - 1
+  calc SIZE_CFG_SYS = N_CLIENTS * SIZE_CFG_SYS_1
+  load SIZE_CFG_SYS
+
+  # check_configuration
+  exec 33
+
+  # perform_configuration
+  exec 77 # basic ET
+  parwait KRDY from [1-8] as cnode
+    # configure_node
+    exec 487
+    # first load configuration data
+    load SIZE_CFG_NODE
+    send cnode CONFIG SIZE_CFG_NODE
+
+    # ...then application code
+    load SIZE_APPLICATION_NOKREP
+    send cnode APPLICATION SIZE_APPLICATION_NOKREP
+    # loop overhead from perform_configuration
+    exec 222
+  end parwait
+end node
+
+########################
+# Distribution end nodes
+node [1-8]
+  ###########
+  # bios_init
+  exec 17
+  # start bios
+  exec 111
+
+  wait KSTD from 0
+  recv 0 KSTD
+
+  #############
+  # kernel_init
+  exec 10
+  # _init (assumed)
+  exec 4
+  # handleCopyTable
+  exec 128 # FIXME: realistic?
+  # kernstd main...
+
+  # start kernel
+  exec 110 # without calls to recv_*
+  # might actually a bit less because last lines won't be executed!
+
+  send 0 KRDY 1
+
+  # recv_configuration
+  wait CONFIG from 0
+  recv 0 CONFIG
+  # recv_application
+  wait APPLICATION from 0
+  recv 0 APPLICATION
+  exec 785
+
+  exec 130
+end node
